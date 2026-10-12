@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Global Currency Exchange & UPI Transfer</title>
+<style>
+body{font-family:Arial,sans-serif;background:#f3f0ff;margin:0;padding:16px}
+.card{max-width:420px;margin:12px auto;background:#fff;padding:18px;border-radius:12px;box-shadow:0 2px 8px #0002}
+h1{font-size:20px;text-align:center;color:#4527a0}h2{font-size:16px;margin-top:0}
+input,select,button{width:100%;padding:10px;margin:6px 0;box-sizing:border-box;font-size:15px}
+button{background:#673ab7;color:#fff;border:0;border-radius:8px}
+.out{font-weight:bold;color:#2e7d32}.err{color:#c62828}
+</style></head><body>
+<h1>🌍 Global Currency Exchange & UPI Transfer</h1>
+<div class="card"><h2>Currency Converter</h2>
+<input id="amt" type="number" value="100" placeholder="Amount">
+<select id="from"></select><select id="to"></select>
+<button onclick="conv()">Convert</button><div id="cres" class="out"></div></div>
+<div class="card"><h2>Send Money (UPI)</h2>
+<input id="sender" value="imran@upi" placeholder="Your UPI ID">
+<input id="rcv" placeholder="Receiver UPI ID (try john@usbank)">
+<input id="tamt" type="number" placeholder="Amount in your currency">
+<input id="pin" type="password" placeholder="PIN (demo: 1234)">
+<button onclick="send()">Send</button><div id="tres"></div></div>
+<div class="card"><h2>Transactions</h2><div id="txs">None yet</div></div>
+<script>
+const API="http://localhost:5000/api";
+fetch(API+"/rates").then(r=>r.json()).then(d=>{
+  const c=Object.keys(d.rates).sort();
+  for(const id of["from","to"])document.getElementById(id).innerHTML=c.map(x=>`<option>${x}</option>`).join("");
+  from.value="USD";to.value="INR";});
+async function conv(){
+  const r=await fetch(`${API}/convert?from=${from.value}&to=${to.value}&amount=${amt.value}`);
+  const d=await r.json();cres.textContent=d.error||`${d.amount} ${d.from} = ${d.result} ${d.to}`;}
+async function send(){
+  const r=await fetch(API+"/transfer",{method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({from:sender.value,to:rcv.value,amount:+tamt.value,pin:pin.value})});
+  const d=await r.json();
+  tres.innerHTML=d.error?`<span class="err">${d.error}</span>`:
+    `<span class="out">✅ Sent ${d.sent} ${d.sentCurrency}; receiver got ${d.received} ${d.receivedCurrency} (fee ${d.fee})</span>`;
+  loadTx();}
+async function loadTx(){
+  const d=await (await fetch(API+"/transactions")).json();
+  if(d.length)txs.innerHTML=d.map(t=>`<p>${t.id}<br>${t.from} → ${t.to}<br>${t.sent} ${t.sentCurrency} → ${t.received} ${t.receivedCurrency}</p>`).join("");}
+</script></body></html>
